@@ -26,7 +26,7 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
 
       {/* Airbnb-style photo gallery: one large photo + grid of secondary photos */}
       {listing.images.length > 0 ? (
-        <div className="grid grid-cols-1 gap-2 overflow-hidden rounded-3xl md:grid-cols-2">
+        <div className={`grid grid-cols-1 gap-2 overflow-hidden rounded-3xl ${secondaryImages.length > 0 ? "md:grid-cols-2" : ""}`}>
           <div className="relative aspect-[4/3] w-full md:aspect-auto md:h-full md:min-h-[420px]">
             <Image
               src={mainImage.url}
