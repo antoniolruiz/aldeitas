@@ -33,7 +33,7 @@ function safeMapEmbedUrl(url: string | null | undefined): string | null {
     const parsed = new URL(String(url).trim());
     if (parsed.protocol !== "https:") return null;
     const host = parsed.hostname.toLowerCase();
-    if (host === "google.com" || host.endsWith(".google.com") || host === "maps.app.goo.gl") {
+    if (host === "google.com" || host.endsWith(".google.com")) {
       return parsed.toString();
     }
     return null;
