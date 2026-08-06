@@ -57,6 +57,16 @@ function getHotelImages(hotel: Hotel): string[] {
   return images;
 }
 
+type HotelCardProps = {
+  h: Hotel;
+  isExpanded: boolean;
+  isAnimating: boolean;
+  expandedRef: React.RefObject<HTMLDivElement | null>;
+  availableRooms: number | null;
+  setExpandedHotelId: (id: string | null) => void;
+  setSelectedHotelImage: (src: string | null) => void;
+};
+
 export default function HotelGrid({ hotels }: { hotels: Hotel[] }) {
   const [query, setQuery] = useState("");
   const [showMap, setShowMap] = useState(false);
@@ -102,15 +112,8 @@ export default function HotelGrid({ hotels }: { hotels: Hotel[] }) {
     if (expandedHotelId) {
       const expandedHotel = hotels.find(h => h.id === expandedHotelId);
       if (expandedHotel) {
-        const slug = slugify(expandedHotel.name);
-        const candidates = [
-          `/images/hotels/${slug}/cover.jpg`,
-          `/images/hotels/${slug}/cover.jpeg`,
-          `/images/hotels/${slug}/cover.png`,
-          `/images/hotels/${slug}/cover.webp`,
-        ];
-        // Use the first candidate as the blur source
-        setSelectedHotelImage(candidates[0]);
+        // Resolve the cover the same way as the card and gallery
+        setSelectedHotelImage(getHotelImages(expandedHotel)[0]);
       }
     } else {
       setSelectedHotelImage(null);
@@ -219,7 +222,7 @@ export default function HotelGrid({ hotels }: { hotels: Hotel[] }) {
               isExpanded={expandedHotelId === h.id}
               isAnimating={isAnimating}
               expandedRef={expandedRef}
-              availableRooms={(searchParams && hotelAvailability) ? (hotelAvailability[h.id] || 0) : null}
+              availableRooms={searchParams && hotelAvailability ? (hotelAvailability[h.id] || 0) : null}
               setExpandedHotelId={setExpandedHotelId}
               setSelectedHotelImage={setSelectedHotelImage}
             />
@@ -234,16 +237,6 @@ export default function HotelGrid({ hotels }: { hotels: Hotel[] }) {
     </div>
   );
 }
-
-type HotelCardProps = {
-  h: Hotel;
-  isExpanded: boolean;
-  isAnimating: boolean;
-  expandedRef: React.RefObject<HTMLDivElement | null>;
-  availableRooms: number | null;
-  setExpandedHotelId: (id: string | null) => void;
-  setSelectedHotelImage: (src: string | null) => void;
-};
 
 const HotelCard = memo(function HotelCard({
   h,
@@ -273,6 +266,7 @@ const HotelCard = memo(function HotelCard({
       }
     }, [isExpanded, mapEmbedUrl, iframeSrc]);
     const candidates = [
+      ...(h.coverImageUrl ? [h.coverImageUrl] : []),
       `/images/hotels/${slug}/cover.jpg`,
       `/images/hotels/${slug}/cover.jpeg`,
       `/images/hotels/${slug}/cover.png`,
@@ -287,7 +281,8 @@ const HotelCard = memo(function HotelCard({
     const rooms = availableRooms !== null ? availableRooms : totalRooms;
     const minPrice = h.listings?.length ? Math.min(...h.listings.map((l) => l.nightlyBasePrice)) : null;
 
-    const galleryImages = getHotelImages(h);
+    const [failedImages, setFailedImages] = useState<string[]>([]);
+    const galleryImages = getHotelImages(h).filter((src) => !failedImages.includes(src));
 
     return (
       <div
@@ -401,6 +396,10 @@ const HotelCard = memo(function HotelCard({
                             sizes="65vw"
                             className="object-cover transition-opacity duration-300"
                             onError={() => {
+                              const failed = galleryImages[carouselIndex] || galleryImages[0];
+                              if (failed) {
+                                setFailedImages((prev) => [...prev, failed]);
+                              }
                               setCarouselIndex(0);
                             }}
                           />
@@ -511,4 +510,4 @@ const HotelCard = memo(function HotelCard({
         )}
       </div>
     );
-});
+  });
