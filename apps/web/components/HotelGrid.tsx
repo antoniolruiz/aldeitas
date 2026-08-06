@@ -26,6 +26,22 @@ function slugify(name: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+// Only allow https Google Maps embed URLs as iframe sources
+function safeMapEmbedUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(String(url).trim());
+    if (parsed.protocol !== "https:") return null;
+    const host = parsed.hostname.toLowerCase();
+    if (host === "google.com" || host.endsWith(".google.com") || host === "maps.app.goo.gl") {
+      return parsed.toString();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function getHotelImages(hotel: Hotel): string[] {
   const slug = slugify(hotel.name);
   const images: string[] = [];
@@ -75,7 +91,7 @@ export default function HotelGrid({ hotels }: { hotels: Hotel[] }) {
   }, [filtered]);
 
   const mapHotels = useMemo(
-    () => filtered.filter((h) => h.googleMapsUrl && String(h.googleMapsUrl).trim() !== ""),
+    () => filtered.filter((h) => safeMapEmbedUrl(h.googleMapsUrl) !== null),
     [filtered]
   );
   const [mapHotelId, setMapHotelId] = useState<string | null>(null);
@@ -179,7 +195,7 @@ export default function HotelGrid({ hotels }: { hotels: Hotel[] }) {
             {activeMapHotel ? (
               <iframe
                 title={`Map of ${activeMapHotel.name}`}
-                src={String(activeMapHotel.googleMapsUrl)}
+                src={safeMapEmbedUrl(activeMapHotel.googleMapsUrl) ?? undefined}
                 width="100%"
                 height="100%"
                 style={{ border: 0, position: "absolute", inset: 0 }}
@@ -244,10 +260,7 @@ const HotelCard = memo(function HotelCard({
     const slug = slugify(h.name);
 
     // Get the map embed URL directly from the database - memoize to prevent recalculation
-    const mapEmbedUrl = useMemo(() => {
-      const rawUrl = h.googleMapsUrl;
-      return rawUrl && String(rawUrl).trim() !== "" ? String(rawUrl).trim() : null;
-    }, [h.googleMapsUrl, h.id]);
+    const mapEmbedUrl = useMemo(() => safeMapEmbedUrl(h.googleMapsUrl), [h.googleMapsUrl]);
 
     // Set iframe src only once when it first becomes visible
     const iframeKey = `map-${h.id}`;
